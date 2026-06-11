@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Character Combat — Dice Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;min-height:100%;background:#020208;font-family:'Share Tech Mono',monospace;color:#fff;overflow-x:hidden}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh;width:100%;position:relative}
+.screen.active{display:flex;flex-direction:column}
+#online-screen.active,#waiting-screen.active{align-items:center;justify-content:center}
+
+/* ══════════════════ HOME ══════════════════ */
+#home{background:#020208;align-items:center;position:relative;overflow:hidden}
+#bg-canvas{position:fixed;inset:0;pointer-events:none;z-index:0}
+.home-inner{position:relative;z-index:2;width:100%;max-width:680px;margin:0 auto;padding:20px 16px 40px;display:flex;flex-direction:column;align-items:center;gap:0}
+
+/* HOW TO PLAY banner */
+.htp-banner{width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 20px;margin-bottom:24px}
+.htp-title{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;letter-spacing:5px;color:rgba(255,255,255,0.4);margin-bottom:14px;text-align:center}
+.htp-steps{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.htp-step{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start}
+.htp-step-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.htp-step-body{}
+.htp-step-label{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;color:rgba(255,255,255,0.35);margin-bottom:3px}
+.htp-step-text{font-size:11px;color:rgba(255,255,255,0.65);line-height:1.5}
+.htp-stages{margin-top:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:10px;padding:10px 14px}
+.htp-stages-label{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;color:rgba(255,255,255,0.3);margin-bottom:8px}
+.htp-stages-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.htp-stage-pill{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:4px 10px;font-size:10px;color:rgba(255,255,255,0.55)}
+.htp-stage-pill canvas{display:block}
+.htp-arrow{color:rgba(255,255,255,0.2);font-size:12px}
+.htp-attack{margin-top:10px;background:rgba(255,200,0,0.04);border:1px solid rgba(255,200,0,0.15);border-radius:10px;padding:10px 14px;font-size:11px;color:rgba(255,200,0,0.7);line-height:1.5}
+.htp-attack strong{color:#ffc800;font-weight:normal}
+
+/* LOGO */
+.game-logo{font-family:'Orbitron',sans-serif;font-weight:900;font-size:clamp(32px,9vw,64px);letter-spacing:3px;text-align:center;line-height:1.05;margin-bottom:6px}
+.game-logo .c1{color:#00cfff;text-shadow:0 0 30px rgba(0,207,255,0.5)}
+.game-logo .c2{color:#ff2244;text-shadow:0 0 30px rgba(255,34,68,0.5)}
+.game-tagline{font-size:11px;letter-spacing:6px;color:rgba(255,255,255,0.25);margin-bottom:32px}
+
+/* PREVIEW stickmen */
+.logo-preview{width:100%;max-width:360px;margin:0 auto 32px;position:relative}
+
+/* MODE BUTTONS */
+.mode-cards{width:100%;max-width:400px;display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+.mode-card{position:relative;border-radius:14px;border:2px solid;padding:18px 22px;cursor:pointer;background:rgba(0,0,0,0.5);display:flex;align-items:center;gap:16px;transition:all 0.2s;overflow:hidden}
+.mode-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.2s}
+.mode-card:hover{transform:translateY(-2px)}
+.mode-card:hover::before{opacity:1}
+.mode-card:active{transform:scale(0.98)}
+.mode-card.cpu{border-color:#00cfff;box-shadow:0 0 20px rgba(0,207,255,0.15)}
+.mode-card.cpu::before{background:radial-gradient(ellipse at left,rgba(0,207,255,0.08),transparent 70%)}
+.mode-card.cpu:hover{box-shadow:0 0 32px rgba(0,207,255,0.3)}
+.mode-card.multi{border-color:#ff2244;box-shadow:0 0 20px rgba(255,34,68,0.15)}
+.mode-card.multi::before{background:radial-gradient(ellipse at left,rgba(255,34,68,0.08),transparent 70%)}
+.mode-card.multi:hover{box-shadow:0 0 32px rgba(255,34,68,0.3)}
+.mode-icon{font-size:28px;flex-shrink:0}
+.mode-info{}
+.mode-name{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:700;letter-spacing:3px;margin-bottom:3px}
+.mode-card.cpu .mode-name{color:#00cfff}
+.mode-card.multi .mode-name{color:#ff2244}
+.mode-desc{font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:1px}
+.mode-arrow{margin-left:auto;font-size:20px;opacity:0.4;transition:all 0.2s}
+.mode-card:hover .mode-arrow{opacity:1;transform:translateX(4px)}
+
+/* ══════════════════ GAME ══════════════════ */
+#game-screen{background:#050510;position:relative;justify-content:flex-start}
+.scanline{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:100}
+#particle-canvas{position:absolute;inset:0;pointer-events:none;z-index:50}
+
+/* back button */
+#back-btn{position:absolute;top:10px;left:10px;z-index:110;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:6px 12px;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;color:rgba(255,255,255,0.4);cursor:pointer;transition:all 0.2s}
+#back-btn:hover{color:#fff;border-color:rgba(255,255,255,0.4)}
+#mode-badge{position:absolute;top:10px;right:10px;z-index:110;background:rgba(0,0,0,0.5);border-radius:8px;padding:6px 12px;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.1)}
+
+/* player zones */
+#p2zone{flex-shrink:0;height:248px;background:linear-gradient(180deg,#0a0015,#050510);display:flex;flex-direction:column;align-items:center;padding:36px 12px 0}
+#p1zone{flex-shrink:0;height:248px;background:linear-gradient(0deg,#000a0f,#050510);display:flex;flex-direction:column;align-items:center;padding:0 12px 8px}
+#midbar{flex-shrink:0;height:112px;display:flex;align-items:center;justify-content:center;gap:24px;background:#050510}
+#divider{flex-shrink:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);margin:0 20px}
+.p-label{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:4px;margin-bottom:4px}
+.victory-box{display:flex;gap:8px;align-items:center;justify-content:center;padding:4px 16px;border-radius:6px;min-height:34px;margin-bottom:4px}
+#vbox2{border:1px solid rgba(255,34,68,0.4);background:rgba(255,34,68,0.05)}
+#vbox1{border:1px solid rgba(0,207,255,0.4);background:rgba(0,207,255,0.05)}
+.bullet-slot{width:28px;height:28px;border-radius:50%;border:1px dashed rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;transition:all 0.3s;cursor:default;overflow:hidden}
+.bullet-slot.filled-red{border-color:#ff2244;cursor:pointer}
+.bullet-slot.filled-blue{border-color:#00cfff;cursor:pointer}
+.bullet-slot.attack-selected{animation:selPulse 0.5s ease-in-out infinite alternate}
+@keyframes selPulse{0%{box-shadow:0 0 6px currentColor,0 0 20px currentColor;transform:scale(1)}100%{box-shadow:0 0 20px currentColor,0 0 40px currentColor;transform:scale(1.18)}}
+.chars-row{display:flex;gap:8px;justify-content:center;flex:1;align-items:flex-end;padding-bottom:4px;width:100%}
+.char-card{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px;cursor:default;border-radius:8px;padding:3px;transition:transform 0.2s,border-color 0.2s,box-shadow 0.2s;border:1px solid transparent}
+.char-card.targetable{cursor:crosshair;border-color:rgba(255,200,0,0.6);animation:tgtShake 0.3s ease-in-out infinite}
+.char-card.targetable:hover{background:rgba(255,200,0,0.07);box-shadow:0 0 14px rgba(255,200,0,0.35)}
+@keyframes tgtShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+.char-num{font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:1px}
+.stick-canvas{display:block}
+.stage-bar{display:flex;gap:3px;margin-top:2px}
+.stage-pip{width:8px;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);transition:all 0.3s}
+.stage-pip.active-red{background:#ff2244;box-shadow:0 0 4px #ff2244}
+.stage-pip.active-blue{background:#00cfff;box-shadow:0 0 4px #00cfff}
+#lastroll-wrap{display:flex;flex-direction:column;align-items:center}
+#lastroll-label{font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:3px;margin-bottom:2px}
+#lastroll{font-family:'Orbitron',sans-serif;font-size:46px;font-weight:900;color:#fff;transition:color 0.3s;min-width:72px;text-align:center}
+#turn-ind{font-size:9px;letter-spacing:2px;padding:4px 12px;border-radius:20px;border:1px solid;text-align:center;transition:all 0.3s}
+#attack-banner{font-size:10px;letter-spacing:2px;padding:4px 14px;border-radius:20px;border:1px solid rgba(255,200,0,0.6);color:#ffc800;background:rgba(255,200,0,0.06);text-align:center;display:none;animation:bnrPulse 0.8s ease-in-out infinite alternate}
+@keyframes bnrPulse{0%{box-shadow:0 0 6px rgba(255,200,0,0.2)}100%{box-shadow:0 0 18px rgba(255,200,0,0.6)}}
+
+/* CPU thinking indicator */
+#cpu-thinking{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:120;display:none;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+#cpu-thinking.show{display:flex}
+.cpu-dots{display:flex;gap:5px}
+.cpu-dot{width:7px;height:7px;border-radius:50%;background:#ff2244;animation:dotBounce 0.6s ease-in-out infinite}
+.cpu-dot:nth-child(2){animation-delay:0.15s}
+.cpu-dot:nth-child(3){animation-delay:0.3s}
+@keyframes dotBounce{0%,100%{transform:translateY(0);opacity:0.4}50%{transform:translateY(-6px);opacity:1}}
+#cpu-label{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:3px;color:#ff2244;opacity:0.7}
+
+.dice-btn{width:66px;height:66px;border-radius:12px;border:2px solid;cursor:pointer;display:flex;align-items:center;justify-content:center;position:absolute;bottom:12px;transition:all 0.2s;background:rgba(0,0,0,0.6);user-select:none;padding:0}
+.dice-btn canvas{display:block;border-radius:8px}
+#dice-p1{left:12px;border-color:#00cfff;box-shadow:0 0 16px rgba(0,207,255,0.25)}
+#dice-p2{right:12px;border-color:#ff2244;box-shadow:0 0 16px rgba(255,34,68,0.25)}
+.dice-btn:hover:not(:disabled){transform:scale(1.08)}
+.dice-btn:disabled{opacity:0.25;cursor:not-allowed}
+.dice-btn.shake{animation:diceShake 0.4s ease}
+@keyframes diceShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-15deg) scale(1.1)}40%{transform:rotate(15deg) scale(1.1)}60%{transform:rotate(-10deg)}80%{transform:rotate(10deg)}}
+
+/* result overlay */
+#result-overlay{position:absolute;inset:0;background:rgba(5,5,16,0.93);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:200;gap:14px}
+#result-overlay.show{display:flex}
+#win-text{font-family:'Orbitron',sans-serif;font-size:clamp(28px,8vw,48px);font-weight:900;letter-spacing:4px}
+#win-sub{font-size:12px;letter-spacing:3px;opacity:0.5}
+.res-btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+.res-btn{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:3px;padding:10px 22px;border-radius:8px;cursor:pointer;border:2px solid;background:transparent;transition:all 0.2s;color:#fff}
+.res-btn:hover{transform:scale(1.04)}
+.bullet-fly{position:absolute;z-index:60;pointer-events:none}
+.destroy-flash{animation:dFlash 0.6s ease-out forwards}
+@keyframes dFlash{0%{background:rgba(255,50,0,0.5);box-shadow:0 0 30px rgba(255,50,0,0.8)}50%{background:rgba(255,50,0,0.15)}100%{background:transparent;box-shadow:none}}
+
+/* countdown */
+#countdown{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:180;pointer-events:none;background:rgba(5,5,16,0.7)}
+#countdown.show{display:flex}
+#cd-num{font-family:'Orbitron',sans-serif;font-size:clamp(80px,22vw,130px);font-weight:900;color:#fff;opacity:0;transform:scale(2);transition:opacity 0.3s,transform 0.3s}
+#cd-num.pop{opacity:1;transform:scale(1)}
+
+/* ── 3-DOT HELP BUTTON ── */
+#help-btn{position:fixed;top:14px;right:14px;z-index:300;width:42px;height:42px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.18);background:rgba(10,10,20,0.75);backdrop-filter:blur(8px);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:all 0.2s}
+#help-btn:hover{border-color:rgba(255,255,255,0.4);background:rgba(20,20,40,0.9);transform:scale(1.06)}
+#help-btn:active{transform:scale(0.96)}
+.dot{width:4px;height:4px;border-radius:50%;background:#fff;opacity:0.7}
+
+/* ── HOW TO PLAY MODAL ── */
+#htp-modal{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:16px}
+#htp-modal.show{display:flex}
+#htp-backdrop{position:absolute;inset:0;background:rgba(2,2,8,0.88);backdrop-filter:blur(6px)}
+#htp-box{position:relative;z-index:2;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;background:#0c0c1a;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px 20px;display:flex;flex-direction:column;gap:14px;animation:modalIn 0.25s ease}
+@keyframes modalIn{0%{opacity:0;transform:scale(0.94) translateY(10px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+#htp-box::-webkit-scrollbar{width:4px}
+#htp-box::-webkit-scrollbar-track{background:transparent}
+#htp-box::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:2px}
+.htp-modal-header{display:flex;align-items:center;justify-content:space-between}
+.htp-modal-title{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;letter-spacing:5px;color:rgba(255,255,255,0.5)}
+#htp-close{width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.4);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0}
+#htp-close:hover{border-color:rgba(255,255,255,0.4);color:#fff}
+.htp-modal-steps{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.htp-modal-step{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start}
+.htp-modal-step-icon{font-size:20px;flex-shrink:0}
+.htp-modal-step-lbl{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;color:rgba(255,255,255,0.35);margin-bottom:3px}
+.htp-modal-step-txt{font-size:11px;color:rgba(255,255,255,0.62);line-height:1.5}
+.htp-modal-section-lbl{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;color:rgba(255,255,255,0.28);margin-bottom:8px}
+.htp-modal-stages{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px 14px}
+.htp-modal-stages-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.htp-modal-pill{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:4px 10px;font-size:10px;color:rgba(255,255,255,0.55)}
+.htp-modal-arrow{color:rgba(255,255,255,0.2);font-size:11px}
+.htp-modal-attack{background:rgba(255,200,0,0.04);border:1px solid rgba(255,200,0,0.15);border-radius:10px;padding:10px 14px;font-size:11px;color:rgba(255,200,0,0.7);line-height:1.6}
+.htp-modal-attack strong{color:#ffc800;font-weight:normal}
+.htp-modal-tip{background:rgba(0,207,255,0.04);border:1px solid rgba(0,207,255,0.12);border-radius:10px;padding:10px 14px;font-size:11px;color:rgba(0,207,255,0.6);line-height:1.6}
+.htp-modal-tip strong{color:#00cfff;font-weight:normal}
+
+/* ══════════════════ ONLINE MODE ══════════════════ */
+#online-screen{background:#020208;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.online-inner{position:relative;z-index:2;width:100%;max-width:420px;padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.online-title{font-family:'Orbitron',sans-serif;font-size:clamp(22px,6vw,36px);font-weight:900;letter-spacing:3px;text-align:center}
+.online-title span{color:#00cfff}
+.online-sub{font-size:11px;letter-spacing:4px;color:rgba(255,255,255,0.25);margin-bottom:8px}
+.lobby-card{width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.lobby-card-title{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:3px;color:rgba(255,255,255,0.35);margin-bottom:2px}
+.lobby-btn{padding:14px;border-radius:10px;border:2px solid;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;letter-spacing:3px;cursor:pointer;background:transparent;transition:all 0.2s;width:100%}
+.lobby-btn.create{border-color:#00cfff;color:#00cfff}
+.lobby-btn.create:hover{background:rgba(0,207,255,0.1);box-shadow:0 0 20px rgba(0,207,255,0.25)}
+.lobby-btn.join-btn{border-color:#ff2244;color:#ff2244}
+.lobby-btn.join-btn:hover{background:rgba(255,34,68,0.1);box-shadow:0 0 20px rgba(255,34,68,0.25)}
+.lobby-divider{height:1px;background:rgba(255,255,255,0.06);margin:4px 0}
+.code-input-wrap{display:flex;gap:8px}
+.code-input{flex:1;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.15);border-radius:10px;padding:12px 14px;font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;letter-spacing:8px;color:#fff;text-align:center;outline:none;transition:border-color 0.2s;width:100%}
+.code-input:focus{border-color:#ff2244;box-shadow:0 0 12px rgba(255,34,68,0.2)}
+.code-input::placeholder{color:rgba(255,255,255,0.2);letter-spacing:4px;font-size:13px}
+.lobby-back{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:3px;color:rgba(255,255,255,0.3);cursor:pointer;background:none;border:none;padding:4px;transition:color 0.2s}
+.lobby-back:hover{color:rgba(255,255,255,0.7)}
+
+/* waiting room */
+#waiting-screen{background:#020208;align-items:center;justify-content:center}
+.waiting-inner{display:flex;flex-direction:column;align-items:center;gap:20px;padding:20px;text-align:center}
+.room-code-display{font-family:'Orbitron',sans-serif;font-size:clamp(48px,15vw,80px);font-weight:900;letter-spacing:12px;color:#00cfff;text-shadow:0 0 40px rgba(0,207,255,0.5)}
+.room-code-label{font-size:11px;letter-spacing:4px;color:rgba(255,255,255,0.3)}
+.waiting-msg{font-size:12px;letter-spacing:2px;color:rgba(255,255,255,0.4);display:flex;align-items:center;gap:8px}
+.wait-dots{display:flex;gap:4px}
+.wait-dot{width:6px;height:6px;border-radius:50%;background:#00cfff;animation:wdot 1s ease-in-out infinite}
+.wait-dot:nth-child(2){animation-delay:0.2s}.wait-dot:nth-child(3){animation-delay:0.4s}
+@keyframes wdot{0%,100%{opacity:0.2;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
+.share-hint{background:rgba(0,207,255,0.05);border:1px solid rgba(0,207,255,0.15);border-radius:10px;padding:12px 16px;font-size:11px;color:rgba(0,207,255,0.6);line-height:1.6;max-width:300px}
+.share-hint strong{color:#00cfff}
+
+/* connection status */
+#conn-status{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:500;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;padding:6px 14px;border-radius:20px;display:none;animation:fadeInUp 0.3s ease}
+#conn-status.show{display:block}
+#conn-status.ok{background:rgba(0,255,100,0.1);border:1px solid rgba(0,255,100,0.3);color:#00ff64}
+#conn-status.err{background:rgba(255,34,68,0.1);border:1px solid rgba(255,34,68,0.3);color:#ff2244}
+@keyframes fadeInUp{0%{opacity:0;transform:translateX(-50%) translateY(10px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* online HUD overlay */
+#online-turn-banner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:120;font-family:'Orbitron',sans-serif;font-size:clamp(18px,5vw,28px);font-weight:900;letter-spacing:3px;pointer-events:none;opacity:0;transition:opacity 0.4s;text-align:center;text-shadow:0 0 20px currentColor}
+#online-turn-banner.show{opacity:1}
+
+</style>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+<!-- ── 3-DOT HELP BUTTON ── -->
+<button id="help-btn" onclick="toggleHTP()" title="How to Play">
+  <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+</button>
+
+<!-- ── HOW TO PLAY MODAL ── -->
+<div id="htp-modal">
+  <div id="htp-backdrop" onclick="toggleHTP()"></div>
+  <div id="htp-box">
+    <div class="htp-modal-header">
+      <div class="htp-modal-title">★ HOW TO PLAY ★</div>
+      <button id="htp-close" onclick="toggleHTP()">✕</button>
+    </div>
+    <div class="htp-modal-steps">
+      <div class="htp-modal-step"><div class="htp-modal-step-icon">🎲</div><div><div class="htp-modal-step-lbl">ROLL</div><div class="htp-modal-step-txt">Tap your dice on your turn. It always lands on 1, 3, 5, 7, or 9.</div></div></div>
+      <div class="htp-modal-step"><div class="htp-modal-step-icon">🏗️</div><div><div class="htp-modal-step-lbl">BUILD</div><div class="htp-modal-step-txt">Roll the same number 5 times to fully build a stickman in that slot.</div></div></div>
+      <div class="htp-modal-step"><div class="htp-modal-step-icon">💥</div><div><div class="htp-modal-step-lbl">EARN BULLET</div><div class="htp-modal-step-txt">Completing a stickman sends a bullet flying into your victory bar.</div></div></div>
+      <div class="htp-modal-step"><div class="htp-modal-step-icon">🏆</div><div><div class="htp-modal-step-lbl">WIN</div><div class="htp-modal-step-txt">First to hold 3 bullets at the same time wins the match!</div></div></div>
+    </div>
+    <div class="htp-modal-stages">
+      <div class="htp-modal-section-lbl">STICKMAN ASSEMBLY — 5 STAGES</div>
+      <div class="htp-modal-stages-row" id="modal-stages-row"></div>
+    </div>
+    <div class="htp-modal-attack"><strong>⚡ ATTACK MODE:</strong> Instead of rolling, click one of your earned bullets. Your opponent's active slots start shaking — click any one to <strong>destroy their progress</strong> and reset to zero. Costs 1 bullet!</div>
+    <div class="htp-modal-tip"><strong>💡 TIP:</strong> Build all 5 slots at once. Only attack when your opponent is close to winning — spending bullets carelessly means you need to rebuild to 3!</div>
+  </div>
+</div>
+
+
+<!-- ══ HOME SCREEN ══ -->
+<div class="screen active" id="home">
+  <canvas id="bg-canvas"></canvas>
+  <div class="home-inner">
+
+    <!-- HOW TO PLAY -->
+    <div class="htp-banner">
+      <div class="htp-title">★ HOW TO PLAY ★</div>
+      <div class="htp-steps">
+        <div class="htp-step">
+          <div class="htp-step-icon">🎲</div>
+          <div class="htp-step-body">
+            <div class="htp-step-label">ROLL</div>
+            <div class="htp-step-text">Tap your dice on your turn. It always lands on 1, 3, 5, 7, or 9.</div>
+          </div>
+        </div>
+        <div class="htp-step">
+          <div class="htp-step-icon">🏗️</div>
+          <div class="htp-step-body">
+            <div class="htp-step-label">BUILD</div>
+            <div class="htp-step-text">Roll the same number 5 times to fully build a stickman in that slot.</div>
+          </div>
+        </div>
+        <div class="htp-step">
+          <div class="htp-step-icon">💥</div>
+          <div class="htp-step-body">
+            <div class="htp-step-label">EARN BULLET</div>
+            <div class="htp-step-text">Completing a stickman shoots a bullet into your victory bar.</div>
+          </div>
+        </div>
+        <div class="htp-step">
+          <div class="htp-step-icon">🏆</div>
+          <div class="htp-step-body">
+            <div class="htp-step-label">WIN</div>
+            <div class="htp-step-text">First player to hold 3 bullets at the same time wins the match!</div>
+          </div>
+        </div>
+      </div>
+      <div class="htp-stages">
+        <div class="htp-stages-label">STICKMAN ASSEMBLY — 5 STAGES</div>
+        <div class="htp-stages-row" id="stages-preview"></div>
+      </div>
+      <div class="htp-attack">
+        <strong>⚡ ATTACK MODE:</strong> Click one of your earned bullets instead of rolling — your opponent's slots start shaking. Click any slot to <strong>destroy their progress</strong> and reset it to zero. Costs 1 bullet!
+      </div>
+    </div>
+
+    <!-- LOGO -->
+    <div class="game-logo"><span class="c1">CHAR</span><span class="c2">ACTER</span><br><span style="color:#fff;font-size:0.55em;letter-spacing:8px">COMBAT</span></div>
+    <div class="game-tagline">DICE EDITION</div>
+
+    <!-- PREVIEW -->
+    <canvas class="logo-preview" id="preview-canvas" width="360" height="130"></canvas>
+
+    <!-- MODE BUTTONS -->
+    <div class="mode-cards">
+      <div class="mode-card cpu" onclick="startGame('cpu')">
+        <div class="mode-icon">🤖</div>
+        <div class="mode-info">
+          <div class="mode-name">VS COMPUTER</div>
+          <div class="mode-desc">1 player · face the AI</div>
+        </div>
+        <div class="mode-arrow">→</div>
+      </div>
+      <div class="mode-card multi" onclick="startGame('2p')">
+        <div class="mode-icon">👥</div>
+        <div class="mode-info">
+          <div class="mode-name">2 PLAYERS</div>
+          <div class="mode-desc">local multiplayer · same device</div>
+        </div>
+        <div class="mode-arrow">→</div>
+      </div>
+      <div class="mode-card" id="online-mode-btn" style="border-color:#a855f7;box-shadow:0 0 20px rgba(168,85,247,0.15)" onclick="goOnlineLobby()">
+        <div class="mode-icon">🌐</div>
+        <div class="mode-info">
+          <div class="mode-name" style="color:#a855f7">ONLINE</div>
+          <div class="mode-desc">play with friends anywhere</div>
+        </div>
+        <div class="mode-arrow" style="color:#a855f7">→</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ GAME SCREEN ══ -->
+<div class="screen" id="game-screen">
+  <div class="scanline"></div>
+  <canvas id="particle-canvas"></canvas>
+  <button id="back-btn" onclick="goHome()">← MENU</button>
+  <div id="mode-badge">VS CPU</div>
+
+  <div id="p2zone">
+    <div class="p-label" id="p2label" style="color:#ff2244;text-shadow:0 0 10px #ff2244">▲ PLAYER 2 ▲</div>
+    <div class="victory-box" id="vbox2">
+      <div class="bullet-slot" id="b2-0"></div>
+      <div class="bullet-slot" id="b2-1"></div>
+      <div class="bullet-slot" id="b2-2"></div>
+    </div>
+    <div class="chars-row" id="chars2"></div>
+  </div>
+  <div id="divider"></div>
+  <div id="midbar">
+    <div id="lastroll-wrap">
+      <div id="lastroll-label">LAST ROLL</div>
+      <div id="lastroll">—</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+      <div id="turn-ind" style="color:#00cfff;border-color:#00cfff;background:rgba(0,207,255,0.1)">P1 TURN</div>
+      <div id="attack-banner">⚡ ATTACK — SELECT TARGET</div>
+    </div>
+  </div>
+  <div id="divider" style="margin:0 20px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent)"></div>
+  <div id="p1zone">
+    <div class="chars-row" id="chars1"></div>
+    <div class="victory-box" id="vbox1">
+      <div class="bullet-slot" id="b1-0"></div>
+      <div class="bullet-slot" id="b1-1"></div>
+      <div class="bullet-slot" id="b1-2"></div>
+    </div>
+    <div class="p-label" style="color:#00cfff;text-shadow:0 0 10px #00cfff;margin-top:4px">▼ PLAYER 1 ▼</div>
+  </div>
+
+  <button class="dice-btn" id="dice-p1"><canvas id="die1-cv" width="44" height="44"></canvas></button>
+  <button class="dice-btn" id="dice-p2"><canvas id="die2-cv" width="44" height="44"></canvas></button>
+
+  <div id="cpu-thinking">
+    <div id="cpu-label">CPU THINKING</div>
+    <div class="cpu-dots">
+      <div class="cpu-dot"></div><div class="cpu-dot"></div><div class="cpu-dot"></div>
+    </div>
+  </div>
+
+  <div id="result-overlay">
+    <div id="win-text"></div>
+    <div id="win-sub">VICTORY</div>
+    <div class="res-btns">
+      <button class="res-btn" id="play-again-btn" onclick="restartGame()">PLAY AGAIN</button>
+      <button class="res-btn" onclick="goHome()" style="border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.5)">MENU</button>
+    </div>
+  </div>
+
+  <div id="countdown"><div id="cd-num"></div></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   STICKMAN DRAWING ENGINE
+═══════════════════════════════════════ */
+function drawStick(canvas, stage, color, flip, small){
+  const c = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  c.clearRect(0,0,w,h);
+  if(stage===0) return;
+  c.save();
+  if(flip){ c.translate(w,0); c.scale(-1,1); }
+  c.strokeStyle = color; c.fillStyle = color;
+  c.lineWidth = small ? 1.8 : 2.2;
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  c.shadowBlur = 7; c.shadowColor = color;
+
+  const cx = w/2;
+  const headR = small ? 6 : 8;
+  const headCY = headR + 2;
+  const neckY = headCY + headR;
+  const torsoBot = neckY + (small?18:22);
+  const hipY = torsoBot;
+
+  if(stage>=1){
+    c.beginPath(); c.arc(cx, headCY, headR, 0, Math.PI*2); c.stroke();
+    c.beginPath(); c.arc(cx+(flip?-3:3)*headR/8, headCY-1, headR*0.2, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.arc(cx, headCY+headR*0.3, headR*0.5, 0.2, Math.PI-0.2); c.stroke();
+  }
+  if(stage>=2){
+    c.beginPath(); c.moveTo(cx, neckY); c.lineTo(cx, torsoBot); c.stroke();
+  }
+  if(stage>=3){
+    const armLen = small?12:16;
+    const legLen = small?16:20;
+    c.beginPath(); c.moveTo(cx, neckY+7); c.lineTo(cx-armLen, neckY+armLen); c.stroke();
+    c.beginPath(); c.moveTo(cx, neckY+7); c.lineTo(cx+armLen, neckY+armLen); c.stroke();
+    c.beginPath(); c.moveTo(cx, hipY); c.lineTo(cx-9, hipY+legLen); c.stroke();
+    c.beginPath(); c.moveTo(cx, hipY); c.lineTo(cx+9, hipY+legLen); c.stroke();
+  }
+  if(stage>=4){
+    /* GUN — held in right hand, pointing right */
+    const gx = cx + (small?10:14);
+    const gy = neckY + (small?10:12);
+    const gs2 = small ? 0.7 : 1;
+    c.save();
+    c.translate(gx, gy);
+    c.strokeStyle = color; c.fillStyle = color;
+    c.lineWidth = small?1.6:2;
+    c.shadowBlur = 8; c.shadowColor = color;
+    /* gun body */
+    c.beginPath();
+    c.roundRect(-2*gs2, -3*gs2, 14*gs2, 6*gs2, 1);
+    c.fill();
+    /* barrel */
+    c.beginPath();
+    c.rect(10*gs2, -2*gs2, 7*gs2, 3*gs2);
+    c.fill();
+    /* handle / grip */
+    c.beginPath();
+    c.roundRect(0, 3*gs2, 5*gs2, 7*gs2, 1);
+    c.fill();
+    /* trigger guard */
+    c.strokeStyle = color; c.lineWidth = small?1.2:1.5;
+    c.beginPath();
+    c.arc(3*gs2, 5*gs2, 3*gs2, 0, Math.PI);
+    c.stroke();
+    /* muzzle highlight */
+    c.fillStyle = 'rgba(255,255,255,0.5)';
+    c.beginPath(); c.arc(17*gs2, -0.5*gs2, 1.2*gs2, 0, Math.PI*2); c.fill();
+    c.restore();
+  }
+  if(stage>=5){
+    const bx = cx+(small?12:16), by = neckY+10;
+    c.shadowBlur = 18;
+    c.strokeStyle = '#fff'; c.lineWidth=1.5;
+    for(let i=0;i<6;i++){
+      const a=(i/6)*Math.PI*2;
+      c.beginPath(); c.moveTo(bx+Math.cos(a)*5,by+Math.sin(a)*5); c.lineTo(bx+Math.cos(a)*13,by+Math.sin(a)*13); c.stroke();
+    }
+    c.fillStyle='#fff'; c.beginPath(); c.arc(bx,by,4,0,Math.PI*2); c.fill();
+    c.fillStyle=color; c.beginPath(); c.arc(bx,by,2,0,Math.PI*2); c.fill();
+  }
+  c.restore();
+}
+
+function drawMiniStick(canvas, color){
+  const c = canvas.getContext('2d');
+  c.clearRect(0,0,canvas.width,canvas.height);
+  c.strokeStyle=color; c.fillStyle=color; c.lineWidth=1.5; c.lineCap='round';
+  c.shadowBlur=5; c.shadowColor=color;
+  const cx=canvas.width/2;
+  c.beginPath(); c.arc(cx,4,3,0,Math.PI*2); c.stroke();
+  c.beginPath(); c.moveTo(cx,7); c.lineTo(cx,15); c.stroke();
+  c.beginPath(); c.moveTo(cx,9); c.lineTo(cx-5,13); c.stroke();
+  c.beginPath(); c.moveTo(cx,9); c.lineTo(cx+5,13); c.stroke();
+  c.beginPath(); c.moveTo(cx,15); c.lineTo(cx-4,21); c.stroke();
+  c.beginPath(); c.moveTo(cx,15); c.lineTo(cx+4,21); c.stroke();
+}
+
+/* ═══════════════════════════════════════
+   HOME SCREEN ANIMATIONS
+═══════════════════════════════════════ */
+// Background particles
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+let bgParts = [];
+function initBg(){
+  bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight;
+  bgParts = [];
+  for(let i=0;i<70;i++) bgParts.push({
+    x:Math.random()*bgCanvas.width, y:Math.random()*bgCanvas.height,
+    vx:(Math.random()-0.5)*0.3, vy:-0.15-Math.random()*0.4,
+    r:Math.random()*1.8+0.5, life:Math.random(),
+    col:Math.random()<0.5?'rgba(0,207,255,':'rgba(255,34,68,'
+  });
+}
+initBg();
+function animBg(){
+  if(!document.getElementById('home').classList.contains('active')){ requestAnimationFrame(animBg); return; }
+  bgCtx.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+  bgParts.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.life+=0.004;
+    if(p.y<0||p.life>1){p.y=bgCanvas.height+5;p.x=Math.random()*bgCanvas.width;p.life=0;}
+    const a=Math.sin(p.life*Math.PI)*0.7;
+    bgCtx.fillStyle=p.col+a+')';
+    bgCtx.beginPath(); bgCtx.arc(p.x,p.y,p.r,0,Math.PI*2); bgCtx.fill();
+  });
+  requestAnimationFrame(animBg);
+}
+animBg();
+window.addEventListener('resize',()=>{bgCanvas.width=window.innerWidth;bgCanvas.height=window.innerHeight;});
+
+// Preview canvas stickmen
+function drawPreview(){
+  const cv = document.getElementById('preview-canvas');
+  if(!cv) return;
+  const c = cv.getContext('2d');
+  c.clearRect(0,0,360,130);
+  // Blue stickman left (full)
+  const tmpB = document.createElement('canvas'); tmpB.width=60; tmpB.height=110;
+  drawStick(tmpB, 5, '#00cfff', false, false);
+  c.drawImage(tmpB, 20, 10);
+  // Red stickman right (full, flipped)
+  const tmpR = document.createElement('canvas'); tmpR.width=60; tmpR.height=110;
+  drawStick(tmpR, 5, '#ff2244', true, false);
+  c.drawImage(tmpR, 280, 10);
+  // VS text
+  c.font = "900 28px 'Orbitron',sans-serif";
+  c.fillStyle = 'rgba(255,255,255,0.15)';
+  c.textAlign='center'; c.fillText('VS', 180, 72);
+  // partial stickmen in middle
+  for(let i=1;i<=4;i++){
+    const tmp=document.createElement('canvas'); tmp.width=40; tmp.height=80;
+    drawStick(tmp, i, i<=2?'rgba(0,207,255,0.35)':'rgba(255,34,68,0.35)', i>2, true);
+    c.drawImage(tmp, 80+(i-1)*52, 25);
+  }
+}
+drawPreview();
+
+// Stages preview in how-to-play
+function buildStagesPreview(){
+  const row = document.getElementById('stages-preview');
+  if(!row) return;
+  const labels=['Head','Torso','Arms','Gun','Fire!'];
+  labels.forEach((lbl,i)=>{
+    if(i>0){ const arr=document.createElement('span'); arr.className='htp-arrow'; arr.textContent='→'; row.appendChild(arr); }
+    const pill=document.createElement('div'); pill.className='htp-stage-pill';
+    const cv=document.createElement('canvas'); cv.width=28; cv.height=44;
+    drawStick(cv, i+1, i===4?'#ffc800':'#00cfff', false, true);
+    pill.appendChild(cv);
+    const txt=document.createElement('span'); txt.textContent=lbl; pill.appendChild(txt);
+    row.appendChild(pill);
+  });
+}
+buildStagesPreview();
+
+/* ═══════════════════════════════════════
+   GAME STATE
+═══════════════════════════════════════ */
+const ODDS = [1,3,5,7,9];
+let gameMode = 'cpu';
+const state = {
+  turn:1,
+  rolls:{1:{1:0,3:0,5:0,7:0,9:0},2:{1:0,3:0,5:0,7:0,9:0}},
+  bullets:{1:0,2:0},
+  attackMode:false, attackingPlayer:null, attackBulletIdx:null,
+  gameOver:false, cpuThinking:false
+};
+
+function resetState(){
+  state.turn=1; state.rolls={1:{1:0,3:0,5:0,7:0,9:0},2:{1:0,3:0,5:0,7:0,9:0}};
+  state.bullets={1:0,2:0}; state.attackMode=false; state.attackingPlayer=null;
+  state.attackBulletIdx=null; state.gameOver=false; state.cpuThinking=false;
+}
+
+/* ═══════════════════════════════════════
+   SCREEN SWITCHING
+═══════════════════════════════════════ */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goHome(){
+  state.gameOver=true;
+  document.getElementById('result-overlay').classList.remove('show');
+  document.getElementById('countdown').classList.remove('show');
+  showScreen('home');
+  drawPreview();
+}
+
+function startGame(mode){
+  gameMode = mode;
+  showScreen('game-screen');
+  document.getElementById('mode-badge').textContent = mode==='cpu' ? 'VS CPU' : '2 PLAYERS';
+  document.getElementById('p2label').textContent = mode==='cpu' ? '▲ CPU ▲' : '▲ PLAYER 2 ▲';
+  resetState();
+  buildChars();
+  resetBulletSlots();
+  initDice();
+  document.getElementById('lastroll').textContent='—';
+  document.getElementById('lastroll').style.color='#fff';
+  setTimeout(initDice,50);
+  document.getElementById('attack-banner').style.display='none';
+  document.getElementById('result-overlay').classList.remove('show');
+  resizeParticleCanvas();
+  showCountdown(()=>{
+    updateTurnUI();
+    if(gameMode==='cpu' && state.turn===2) scheduleCpuTurn();
+  });
+}
+
+function restartGame(){ startGame(gameMode); }
+
+/* ═══════════════════════════════════════
+   BUILD CHAR CARDS
+═══════════════════════════════════════ */
+function buildChars(){
+  [1,2].forEach(p=>{
+    const container = document.getElementById('chars'+p);
+    container.innerHTML='';
+    const color = p===1?'#00cfff':'#ff2244';
+    const flip = p===2;
+    ODDS.forEach(n=>{
+      const card=document.createElement('div');
+      card.className='char-card'; card.id=`cc${p}-${n}`;
+      card.dataset.player=p; card.dataset.num=n;
+      const numEl=document.createElement('div');
+      numEl.className='char-num'; numEl.textContent=n;
+      const cv=document.createElement('canvas');
+      cv.className='stick-canvas'; cv.width=48; cv.height=84; cv.id=`cv${p}-${n}`;
+      drawStick(cv,0,color,flip,false);
+      const bar=document.createElement('div');
+      bar.className='stage-bar'; bar.id=`bar${p}-${n}`;
+      for(let i=0;i<5;i++){
+        const pip=document.createElement('div');
+        pip.className='stage-pip'; pip.id=`pip${p}-${n}-${i}`;
+        bar.appendChild(pip);
+      }
+      card.appendChild(numEl); card.appendChild(cv); card.appendChild(bar);
+      card.addEventListener('click',()=>handleCardClick(parseInt(card.dataset.player),parseInt(card.dataset.num)));
+      container.appendChild(card);
+    });
+  });
+}
+
+function redrawChar(p,n){
+  const color=p===1?'#00cfff':'#ff2244';
+  const flip=p===2;
+  const cv=document.getElementById(`cv${p}-${n}`);
+  if(cv) drawStick(cv, state.rolls[p][n], color, flip, false);
+}
+
+/* ═══════════════════════════════════════
+   TURN + HUD
+═══════════════════════════════════════ */
+function updateTurnUI(){
+  const ind=document.getElementById('turn-ind');
+  const d1=document.getElementById('dice-p1');
+  const d2=document.getElementById('dice-p2');
+  const isCpu = gameMode==='cpu';
+  if(state.turn===1){
+    ind.style.color='#00cfff'; ind.style.borderColor='#00cfff'; ind.style.background='rgba(0,207,255,0.1)';
+    ind.textContent='P1 TURN';
+    d1.disabled=false; d2.disabled=true;
+    drawDie('die1-cv','ready','#00cfff',false);
+    drawDie('die2-cv','dim','#ff2244',false);
+  } else {
+    ind.style.color='#ff2244'; ind.style.borderColor='#ff2244'; ind.style.background='rgba(255,34,68,0.1)';
+    ind.textContent= isCpu ? 'CPU TURN' : 'P2 TURN';
+    d1.disabled=true; d2.disabled= isCpu ? true : false;
+    drawDie('die1-cv','dim','#00cfff',false);
+    drawDie('die2-cv', isCpu ? 'dim' : 'ready','#ff2244',false);
+  }
+  rebuildBulletClickHandlers();
+}
+
+function rebuildBulletClickHandlers(){
+  [1,2].forEach(p=>{
+    const canClick = p===state.turn && !state.gameOver && !state.cpuThinking;
+    for(let i=0;i<3;i++){
+      const slot=document.getElementById(`b${p}-${i}`);
+      if(!slot) continue;
+      if(slot.classList.contains('filled-red')||slot.classList.contains('filled-blue')){
+        const idx=i;
+        slot.onclick = canClick ? ()=>activateAttackMode(p,idx) : null;
+        slot.style.cursor = canClick ? 'pointer' : 'default';
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════
+   DICE ROLLING
+═══════════════════════════════════════ */
+/* ── Canvas Die Drawing ── */
+const DOT_POSITIONS = {
+  1:[[0.5,0.5]],
+  3:[[0.25,0.25],[0.5,0.5],[0.75,0.75]],
+  5:[[0.25,0.25],[0.75,0.25],[0.5,0.5],[0.25,0.75],[0.75,0.75]],
+  7:[[0.25,0.2],[0.75,0.2],[0.25,0.5],[0.75,0.5],[0.5,0.35],[0.25,0.8],[0.75,0.8]],
+  9:[[0.25,0.2],[0.5,0.2],[0.75,0.2],[0.25,0.5],[0.5,0.5],[0.75,0.5],[0.25,0.8],[0.5,0.8],[0.75,0.8]]
+};
+
+function drawDie(canvasId, value, color, rolling){
+  const cv = document.getElementById(canvasId);
+  if(!cv) return;
+  const c = cv.getContext('2d');
+  const w = cv.width, h = cv.height;
+  c.clearRect(0,0,w,h);
+  const isDim = value==='dim';
+  const isReady = value==='ready';
+  /* die body */
+  const r = 7;
+  c.save();
+  c.globalAlpha = isDim ? 0.28 : 1;
+  c.shadowBlur = rolling ? 20 : (isReady ? 16 : 8);
+  c.shadowColor = color;
+  /* gradient face */
+  const grad = c.createLinearGradient(2,2,w-2,h-2);
+  grad.addColorStop(0, 'rgba(255,255,255,0.08)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.3)');
+  c.fillStyle = grad;
+  c.strokeStyle = color;
+  c.lineWidth = rolling ? 2.5 : (isReady ? 2.5 : 2);
+  c.beginPath();
+  c.roundRect(3,3,w-6,h-6,r);
+  c.fill(); c.stroke();
+  /* corner marks */
+  c.fillStyle = 'rgba(255,255,255,0.08)';
+  [[5,5],[w-5,5],[5,h-5],[w-5,h-5]].forEach(([px,py])=>{
+    c.beginPath(); c.arc(px,py,2,0,Math.PI*2); c.fill();
+  });
+  /* ready state: pulsing center dot */
+  if(isReady){
+    c.shadowBlur=12; c.shadowColor=color;
+    c.fillStyle=color;
+    c.beginPath(); c.arc(w/2,h/2,4.5,0,Math.PI*2); c.fill();
+    /* small tap hint arrow */
+    c.fillStyle='rgba(255,255,255,0.3)';
+    c.font='9px sans-serif'; c.textAlign='center';
+    c.fillText('TAP',w/2,h-5);
+    c.restore(); return;
+  }
+  /* dots */
+  if(!rolling && value && !isDim){
+    const dots = DOT_POSITIONS[value] || [];
+    dots.forEach(([fx,fy])=>{
+      const px=fx*w, py=fy*h;
+      c.shadowBlur=8; c.shadowColor=color;
+      c.fillStyle=color;
+      c.beginPath(); c.arc(px,py,3.5,0,Math.PI*2); c.fill();
+    });
+  } else if(!rolling && isDim){
+    /* greyed dot in center */
+    c.fillStyle='rgba(255,255,255,0.15)';
+    c.beginPath(); c.arc(w/2,h/2,3,0,Math.PI*2); c.fill();
+  } else if(rolling){
+    /* spinning question marks style — show random face */
+    const rnd = ODDS[Math.floor(Math.random()*5)];
+    const dots = DOT_POSITIONS[rnd]||[];
+    c.globalAlpha=0.35;
+    dots.forEach(([fx,fy])=>{
+      c.fillStyle='#fff';
+      c.beginPath(); c.arc(fx*w,fy*h,3.5,0,Math.PI*2); c.fill();
+    });
+    c.globalAlpha=1;
+  }
+  c.restore();
+}
+
+let dieRollInterval = {};
+function startDieRoll(player, color, onDone){
+  const cvId = 'die'+(player===1?'1':'2')+'-cv';
+  let ticks=0, maxTicks=16; /* ~1 second at 60ms each */
+  clearInterval(dieRollInterval[player]);
+  dieRollInterval[player] = setInterval(()=>{
+    ticks++;
+    drawDie(cvId, null, color, true);
+    if(ticks>=maxTicks){
+      clearInterval(dieRollInterval[player]);
+      const result = ODDS[Math.floor(Math.random()*5)];
+      drawDie(cvId, result, color, false);
+      onDone(result);
+    }
+  }, 62);
+}
+
+function initDice(){
+  drawDie('die1-cv', 'ready', '#00cfff', false);
+  drawDie('die2-cv', 'dim', '#ff2244', false);
+}
+
+function rollDice(player){
+  if(state.gameOver||state.attackMode||state.cpuThinking) return;
+  if(player!==state.turn) return;
+  const color=player===1?'#00cfff':'#ff2244';
+  const btn=document.getElementById('dice-p'+player);
+  btn.disabled=true;
+  /* disable both during roll */
+  document.getElementById('dice-p1').disabled=true;
+  document.getElementById('dice-p2').disabled=true;
+  spawnParticlesBtn(btn, color);
+  startDieRoll(player, color, (n)=>{
+    const lr=document.getElementById('lastroll');
+    lr.textContent=n; lr.style.color=color;
+    processRoll(player, n);
+  });
+}
+
+function processRoll(player, n){
+  const colorClass = player===1?'active-blue':'active-red';
+  /* if slot already complete at stage 5, fire bullet immediately — no reset, no rebuild */
+  if(state.rolls[player][n]>=5){
+    const card=document.getElementById(`cc${player}-${n}`);
+    card.style.transform='scale(1.14)';
+    setTimeout(()=>{ card.style.transform='scale(1)'; },160);
+    setTimeout(()=>fireBullet(player,n),450);
+    return;
+  }
+  state.rolls[player][n]++;
+  const stage = state.rolls[player][n];
+  /* light up pip for this stage */
+  const pip=document.getElementById(`pip${player}-${n}-${stage-1}`);
+  if(pip) pip.className=`stage-pip ${colorClass}`;
+  redrawChar(player,n);
+  const card=document.getElementById(`cc${player}-${n}`);
+  card.style.transform='scale(1.14)';
+  setTimeout(()=>{ card.style.transform='scale(1)'; },160);
+  if(stage===5){ setTimeout(()=>fireBullet(player,n),450); }
+  else { finishTurn(player); }
+}
+
+function finishTurn(player){
+  state.turn = player===1?2:1;
+  updateTurnUI();
+  if(gameMode==='cpu' && state.turn===2 && !state.gameOver) scheduleCpuTurn();
+}
+
+/* ═══════════════════════════════════════
+   CPU AI
+═══════════════════════════════════════ */
+function scheduleCpuTurn(){
+  if(state.gameOver) return;
+  state.cpuThinking=true;
+  document.getElementById('cpu-thinking').classList.add('show');
+  document.getElementById('dice-p2').disabled=true;
+  const delay = 900 + Math.random()*700;
+  setTimeout(()=>{
+    document.getElementById('cpu-thinking').classList.remove('show');
+    state.cpuThinking=false;
+    if(state.gameOver) return;
+    cpuDecide();
+  }, delay);
+}
+
+function cpuDecide(){
+  // Try to attack if has bullets and player 1 has progress
+  if(state.bullets[2]>0){
+    const p1slots = ODDS.filter(n=>state.rolls[1][n]>0);
+    // Attack if player near winning or CPU behind
+    const shouldAttack = (state.bullets[1]>=2 && p1slots.length>0 && Math.random()<0.7)
+                      || (p1slots.length>0 && Math.random()<0.25);
+    if(shouldAttack && p1slots.length>0){
+      // Pick highest progress slot
+      let bestN=p1slots[0], bestProg=0;
+      p1slots.forEach(n=>{ if(state.rolls[1][n]>bestProg){bestProg=state.rolls[1][n];bestN=n;} });
+      cpuAttack(bestN);
+      return;
+    }
+  }
+  // Otherwise roll
+  rollDice(2);
+}
+
+function cpuAttack(targetN){
+  // find a bullet index
+  const bulletIdx = state.bullets[2]-1;
+  if(bulletIdx<0){ rollDice(2); return; }
+  // spend bullet
+  state.bullets[2]--;
+  rebuildBulletDisplay(2);
+  // flash the target
+  spawnDestroyEffect(1, targetN);
+  setTimeout(()=>{
+    resetSlot(1, targetN);
+    state.turn=1;
+    updateTurnUI();
+  },700);
+}
+
+/* ═══════════════════════════════════════
+   ATTACK MODE
+═══════════════════════════════════════ */
+function activateAttackMode(player, bulletIdx){
+  if(state.attackMode){ cancelAttackMode(); return; }
+  const opp=player===1?2:1;
+  const hasTarget=ODDS.some(n=>state.rolls[opp][n]>0);
+  if(!hasTarget) return;
+  state.attackMode=true; state.attackingPlayer=player; state.attackBulletIdx=bulletIdx;
+  const slot=document.getElementById(`b${player}-${bulletIdx}`);
+  slot.style.color=player===1?'#00cfff':'#ff2244';
+  slot.classList.add('attack-selected');
+  document.getElementById('attack-banner').style.display='block';
+  document.getElementById(`dice-p${player}`).disabled=true;
+  ODDS.forEach(n=>{
+    const card=document.getElementById(`cc${opp}-${n}`);
+    if(state.rolls[opp][n]>0) card.classList.add('targetable');
+  });
+}
+
+function cancelAttackMode(){
+  if(!state.attackMode) return;
+  const player=state.attackingPlayer, opp=player===1?2:1;
+  const slot=document.getElementById(`b${player}-${state.attackBulletIdx}`);
+  if(slot) slot.classList.remove('attack-selected');
+  document.getElementById('attack-banner').style.display='none';
+  ODDS.forEach(n=>document.getElementById(`cc${opp}-${n}`).classList.remove('targetable'));
+  state.attackMode=false; state.attackingPlayer=null; state.attackBulletIdx=null;
+  updateTurnUI();
+}
+
+function handleCardClick(tp, num){
+  if(!state.attackMode) return;
+  if(tp===state.attackingPlayer) return;
+  if(state.rolls[tp][num]===0) return;
+  executeDestroy(state.attackingPlayer, tp, num);
+}
+
+function executeDestroy(attacker, victim, num){
+  const bulletIdx=state.attackBulletIdx;
+  const opp=attacker===1?2:1;
+  ODDS.forEach(n=>document.getElementById(`cc${opp}-${n}`).classList.remove('targetable'));
+  document.getElementById('attack-banner').style.display='none';
+  const aSlot=document.getElementById(`b${attacker}-${bulletIdx}`);
+  if(aSlot){ aSlot.classList.remove('attack-selected'); aSlot.className='bullet-slot'; aSlot.innerHTML=''; aSlot.style.color=''; }
+  state.bullets[attacker]--;
+  rebuildBulletDisplay(attacker);
+  spawnDestroyEffect(victim, num);
+  setTimeout(()=>{
+    resetSlot(victim, num);
+    state.attackMode=false; state.attackingPlayer=null; state.attackBulletIdx=null;
+    state.turn=attacker===1?2:1;
+    updateTurnUI();
+    if(gameMode==='cpu' && state.turn===2 && !state.gameOver) scheduleCpuTurn();
+  },700);
+}
+
+/* ═══════════════════════════════════════
+   BULLET SYSTEM
+═══════════════════════════════════════ */
+function fireBullet(player, n){
+  const card=document.getElementById(`cc${player}-${n}`);
+  const gs=document.getElementById('game-screen');
+  const cR=card.getBoundingClientRect(), gR=gs.getBoundingClientRect();
+  const vbox=document.getElementById('vbox'+player);
+  const vR=vbox.getBoundingClientRect();
+  const fly=document.createElement('canvas');
+  fly.className='bullet-fly'; fly.width=24; fly.height=24;
+  drawMiniStick(fly, player===1?'#00cfff':'#ff2244');
+  fly.style.left=(cR.left-gR.left+cR.width/2-12)+'px';
+  fly.style.top=(cR.top-gR.top)+'px';
+  fly.style.position='absolute'; fly.style.zIndex='60';
+  fly.style.transition='left 0.65s cubic-bezier(0.2,0,0.8,1),top 0.65s cubic-bezier(0.2,0,0.8,1),transform 0.65s';
+  gs.appendChild(fly);
+  void fly.offsetWidth;
+  fly.style.left=(vR.left-gR.left+vR.width/2-12)+'px';
+  fly.style.top=(vR.top-gR.top)+'px';
+  fly.style.transform='scale(1.4) rotate(360deg)';
+  setTimeout(()=>{ fly.remove(); addBullet(player); },680);
+}
+
+function addBullet(player){
+  if(state.bullets[player]>=3) return finishTurn(player);
+  state.bullets[player]++;
+  rebuildBulletDisplay(player);
+  spawnVictoryParticles(player);
+  if(state.bullets[player]>=3){ setTimeout(()=>showWin(player),500); return; }
+  finishTurn(player);
+}
+
+function rebuildBulletDisplay(player){
+  const count=state.bullets[player];
+  const colorClass=player===1?'filled-blue':'filled-red';
+  for(let i=0;i<3;i++){
+    const slot=document.getElementById(`b${player}-${i}`);
+    if(!slot) continue;
+    slot.className='bullet-slot'; slot.innerHTML=''; slot.onclick=null; slot.style.cursor='default';
+    if(i<count){
+      slot.className=`bullet-slot ${colorClass}`;
+      const sc=document.createElement('canvas'); sc.width=24; sc.height=24;
+      drawMiniStick(sc, player===1?'#00cfff':'#ff2244');
+      slot.appendChild(sc);
+    }
+  }
+  rebuildBulletClickHandlers();
+}
+
+function resetBulletSlots(){
+  for(let p=1;p<=2;p++) for(let i=0;i<3;i++){
+    const s=document.getElementById(`b${p}-${i}`);
+    if(s){ s.className='bullet-slot'; s.innerHTML=''; s.onclick=null; s.style.cursor='default'; }
+  }
+}
+
+function resetSlot(player, num){
+  state.rolls[player][num]=0;
+  for(let i=0;i<5;i++){
+    const pip=document.getElementById(`pip${player}-${num}-${i}`);
+    if(pip) pip.className='stage-pip';
+  }
+  redrawChar(player, num);
+}
+
+/* ═══════════════════════════════════════
+   WIN
+═══════════════════════════════════════ */
+function showWin(player){
+  state.gameOver=true;
+  const isCpu=gameMode==='cpu';
+  const ov=document.getElementById('result-overlay');
+  const wt=document.getElementById('win-text');
+  const pb=document.getElementById('play-again-btn');
+  const color=player===1?'#00cfff':'#ff2244';
+  if(isCpu) wt.textContent = player===1?'YOU WIN!':'CPU WINS';
+  else wt.textContent = `PLAYER ${player} WINS!`;
+  wt.style.color=color; wt.style.textShadow=`0 0 40px ${color},0 0 80px ${color}`;
+  pb.style.borderColor=color; pb.style.color=color;
+  ov.classList.add('show');
+  for(let i=0;i<12;i++) setTimeout(()=>spawnVictoryParticles(player),i*150);
+}
+
+/* ═══════════════════════════════════════
+   DESTROY EFFECT
+═══════════════════════════════════════ */
+function spawnDestroyEffect(player, num){
+  const card=document.getElementById(`cc${player}-${num}`);
+  card.classList.add('destroy-flash');
+  const gs=document.getElementById('game-screen');
+  const r=card.getBoundingClientRect(), gr=gs.getBoundingClientRect();
+  const cx=r.left-gr.left+r.width/2, cy=r.top-gr.top+r.height/2;
+  const cols=['#ff6600','#ffaa00','#ff2244','#ffffff'];
+  for(let i=0;i<36;i++){
+    const a=Math.random()*Math.PI*2, sp=2+Math.random()*6;
+    particles.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1,life:1,decay:0.022+Math.random()*0.03,size:3+Math.random()*5,color:cols[Math.floor(Math.random()*cols.length)]});
+  }
+  setTimeout(()=>card.classList.remove('destroy-flash'),700);
+}
+
+/* ═══════════════════════════════════════
+   PARTICLES
+═══════════════════════════════════════ */
+const pCanvas=document.getElementById('particle-canvas');
+const pCtx=pCanvas.getContext('2d');
+let particles=[];
+function resizeParticleCanvas(){
+  const gs=document.getElementById('game-screen');
+  pCanvas.width=gs.offsetWidth; pCanvas.height=gs.offsetHeight||700;
+}
+function spawnParticlesBtn(btn, color){
+  const gs=document.getElementById('game-screen');
+  const r=btn.getBoundingClientRect(), gr=gs.getBoundingClientRect();
+  const cx=r.left-gr.left+r.width/2, cy=r.top-gr.top+r.height/2;
+  for(let i=0;i<24;i++){
+    const a=Math.random()*Math.PI*2, sp=2+Math.random()*4;
+    particles.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,decay:0.03+Math.random()*0.03,size:3+Math.random()*4,color});
+  }
+}
+function spawnVictoryParticles(player){
+  const color=player===1?'#00cfff':'#ff2244';
+  const cx=pCanvas.width/2, cy=pCanvas.height/2;
+  for(let i=0;i<44;i++){
+    const a=Math.random()*Math.PI*2, sp=3+Math.random()*7;
+    particles.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,decay:0.014+Math.random()*0.02,size:4+Math.random()*6,color});
+  }
+}
+function animParticles(){
+  pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
+  particles=particles.filter(p=>p.life>0);
+  particles.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.12; p.life-=p.decay;
+    pCtx.globalAlpha=Math.max(0,p.life);
+    pCtx.fillStyle=p.color; pCtx.shadowBlur=8; pCtx.shadowColor=p.color;
+    pCtx.beginPath(); pCtx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2); pCtx.fill();
+    pCtx.shadowBlur=0;
+  });
+  pCtx.globalAlpha=1;
+  requestAnimationFrame(animParticles);
+}
+animParticles();
+
+/* ═══════════════════════════════════════
+   COUNTDOWN
+═══════════════════════════════════════ */
+function showCountdown(cb){
+  const el=document.getElementById('countdown');
+  const num=document.getElementById('cd-num');
+  el.classList.add('show');
+  let n=3;
+  function tick(){
+    num.classList.remove('pop');
+    num.textContent = n>0 ? n : 'GO!';
+    num.style.color = n>0?'#fff':'#00ff88';
+    void num.offsetWidth;
+    num.classList.add('pop');
+    if(n-- > 0){ setTimeout(tick,900); }
+    else { setTimeout(()=>{ el.classList.remove('show'); num.classList.remove('pop'); cb(); },700); }
+  }
+  tick();
+}
+
+/* ═══════════════════════════════════════
+   EVENTS
+═══════════════════════════════════════ */
+document.getElementById('dice-p1').addEventListener('click',()=>{ if(!state.attackMode) rollDice(1); });
+document.getElementById('dice-p2').addEventListener('click',()=>{ if(!state.attackMode) rollDice(2); });
+document.getElementById('game-screen').addEventListener('click',e=>{
+  if(state.attackMode && !e.target.closest('.char-card') && !e.target.closest('.bullet-slot')) cancelAttackMode();
+});
+window.addEventListener('resize', resizeParticleCanvas);
+
+/* ═══════════════════════════════════════
+   HELP MODAL
+═══════════════════════════════════════ */
+function toggleHTP(){
+  const modal = document.getElementById('htp-modal');
+  const isOpen = modal.classList.contains('show');
+  if(!isOpen){
+    buildModalStages();
+    modal.classList.add('show');
+  } else {
+    modal.classList.remove('show');
+  }
+}
+let modalStagesBuilt = false;
+function buildModalStages(){
+  if(modalStagesBuilt) return;
+  modalStagesBuilt = true;
+  const row = document.getElementById('modal-stages-row');
+  if(!row) return;
+  const labels=['Head','Torso','Arms','Gun','Fire!'];
+  labels.forEach((lbl,i)=>{
+    if(i>0){ const arr=document.createElement('span'); arr.className='htp-modal-arrow'; arr.textContent='→'; row.appendChild(arr); }
+    const pill=document.createElement('div'); pill.className='htp-modal-pill';
+    const cv=document.createElement('canvas'); cv.width=28; cv.height=44;
+    drawStick(cv, i+1, i===4?'#ffc800':'#00cfff', false, true);
+    pill.appendChild(cv);
+    const txt=document.createElement('span'); txt.textContent=lbl; pill.appendChild(txt);
+    row.appendChild(pill);
+  });
+}
+// close modal on Escape
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') document.getElementById('htp-modal').classList.remove('show'); });
+
+/* ═══════════════════════════════════════
+   ONLINE MULTIPLAYER
+═══════════════════════════════════════ */
+let socket = null;
+let myPlayerNum = null;
+let onlineRoomCode = null;
+let isOnlineMode = false;
+
+function goOnlineLobby(){
+  try {
+    const s = document.getElementById('online-screen');
+    if(!s){ alert('Online screen not found!'); return; }
+    showScreen('online-screen');
+  } catch(e) {
+    console.error('goOnlineLobby error:', e);
+    alert('Error: ' + e.message);
+  }
+}
+
+function showStatus(msg, type){
+  const el = document.getElementById('conn-status');
+  el.textContent = msg;
+  el.className = 'show ' + (type||'ok');
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
+function connectSocket(){
+  return new Promise((resolve, reject)=>{
+    if(socket && socket.connected){ resolve(); return; }
+    if(socket){ socket.disconnect(); }
+    // Use same origin — Railway serves both frontend and socket on same URL
+    // polling first = more reliable on Railway/cloud hosts
+    socket = io({ 
+      transports: ['polling', 'websocket'],
+      upgrade: true,
+      reconnection: false,
+      timeout: 10000
+    });
+    socket.once('connect', ()=>{ showStatus('Connected!','ok'); resolve(); });
+    socket.once('connect_error', (e)=>{ showStatus('Cannot connect to server','err'); reject(e); });
+  });
+}
+
+function setupSocketEvents(){
+  socket.off();
+
+  socket.on('connect', ()=>showStatus('Connected!','ok'));
+  socket.on('disconnect', ()=>showStatus('Disconnected','err'));
+
+  socket.on('room_created', ({code, playerNum})=>{
+    myPlayerNum = playerNum;
+    onlineRoomCode = code;
+    document.getElementById('display-code').textContent = code;
+    showScreen('waiting-screen');
+  });
+
+  socket.on('opponent_joined', ()=>{
+    showStatus('Opponent joined! Starting...','ok');
+  });
+
+  socket.on('room_joined', ({code, playerNum})=>{
+    myPlayerNum = playerNum;
+    onlineRoomCode = code;
+    showStatus('Joined room ' + code + '!','ok');
+  });
+
+  socket.on('join_error', (msg)=>{
+    showStatus(msg,'err');
+    setTimeout(()=>alert(msg), 100);
+  });
+
+  socket.on('game_start', ({state:st})=>{
+    isOnlineMode = true;
+    gameMode = 'online';
+    showScreen('game-screen');
+    document.getElementById('mode-badge').textContent = 'ONLINE P' + myPlayerNum;
+    document.getElementById('p2label').textContent = '▲ OPPONENT ▲';
+    resetState();
+    buildChars();
+    resetBulletSlots();
+    document.getElementById('lastroll').textContent = '—';
+    document.getElementById('lastroll').style.color = '#fff';
+    document.getElementById('attack-banner').style.display = 'none';
+    document.getElementById('result-overlay').classList.remove('show');
+    resizeParticleCanvas();
+    setTimeout(()=>initDice(), 50);
+    showCountdown(()=>{
+      applyServerState(st);
+      updateOnlineTurnUI();
+    });
+  });
+
+  socket.on('roll_result', ({playerNum, n, state:st})=>{
+    const color = playerNum===1 ? '#00cfff' : '#ff2244';
+    const cvId = 'die'+(playerNum===1?'1':'2')+'-cv';
+    let ticks = 0;
+    const iv = setInterval(()=>{
+      ticks++;
+      drawDie(cvId, null, color, true);
+      if(ticks >= 16){
+        clearInterval(iv);
+        document.getElementById('lastroll').textContent = n;
+        document.getElementById('lastroll').style.color = color;
+        drawDie(cvId, n, color, false);
+        spawnParticlesBtn(document.getElementById('dice-p'+playerNum), color);
+        applyServerState(st);
+        updateOnlineTurnUI();
+      }
+    }, 62);
+  });
+
+  socket.on('attack_result', ({attackerNum, targetNum, state:st})=>{
+    const victim = attackerNum===1 ? 2 : 1;
+    spawnDestroyEffect(victim, targetNum);
+    document.getElementById('attack-banner').style.display = 'none';
+    ODDS_ONLINE.forEach(n=>{
+      const c = document.getElementById('cc'+victim+'-'+n);
+      if(c) c.classList.remove('targetable');
+    });
+    setTimeout(()=>{ applyServerState(st); updateOnlineTurnUI(); }, 700);
+  });
+
+  socket.on('opponent_left', ()=>{
+    showStatus('Opponent disconnected','err');
+    setTimeout(()=>{ alert('Your opponent left the game.'); goHome(); }, 800);
+  });
+
+  socket.on('rematch_vote', ({votes})=>{
+    if(votes===1) document.getElementById('win-sub').textContent = 'Waiting for opponent...';
+  });
+}
+
+const ODDS_ONLINE = [1,3,5,7,9];
+
+function applyServerState(st){
+  state.turn = st.turn;
+  state.gameOver = st.gameOver;
+  ODDS_ONLINE.forEach(n=>{
+    [1,2].forEach(p=>{
+      const serverStage = st.rolls[p][n];
+      state.rolls[p][n] = serverStage;
+      const colorClass = p===1 ? 'active-blue' : 'active-red';
+      for(let i=0;i<5;i++){
+        const pip = document.getElementById('pip'+p+'-'+n+'-'+i);
+        if(pip) pip.className = i < serverStage ? 'stage-pip ' + colorClass : 'stage-pip';
+      }
+      redrawChar(p, n);
+    });
+  });
+  [1,2].forEach(p=>{
+    state.bullets[p] = st.bullets[p];
+    rebuildBulletDisplay(p);
+  });
+  if(st.gameOver && st.winner) showWinOnline(st.winner);
+}
+
+function showWinOnline(winner){
+  state.gameOver = true;
+  const color = winner===1 ? '#00cfff' : '#ff2244';
+  const ov = document.getElementById('result-overlay');
+  const wt = document.getElementById('win-text');
+  const pb = document.getElementById('play-again-btn');
+  wt.textContent = winner===myPlayerNum ? 'YOU WIN!' : 'YOU LOSE';
+  wt.style.color = color;
+  wt.style.textShadow = '0 0 40px '+color+', 0 0 80px '+color;
+  pb.style.borderColor = color; pb.style.color = color;
+  pb.textContent = 'REMATCH';
+  ov.classList.add('show');
+  for(let i=0;i<12;i++) setTimeout(()=>spawnVictoryParticles(winner), i*150);
+}
+
+function updateOnlineTurnUI(){
+  const myTurn = state.turn === myPlayerNum;
+  const ind = document.getElementById('turn-ind');
+  const d1  = document.getElementById('dice-p1');
+  const d2  = document.getElementById('dice-p2');
+
+  if(state.turn === 1){
+    ind.style.color='#00cfff'; ind.style.borderColor='#00cfff'; ind.style.background='rgba(0,207,255,0.1)';
+    ind.textContent = myPlayerNum===1 ? 'YOUR TURN ⚡' : 'OPPONENT TURN';
+    drawDie('die1-cv', myPlayerNum===1 ? 'ready' : 'dim', '#00cfff', false);
+    drawDie('die2-cv', 'dim', '#ff2244', false);
+  } else {
+    ind.style.color='#ff2244'; ind.style.borderColor='#ff2244'; ind.style.background='rgba(255,34,68,0.1)';
+    ind.textContent = myPlayerNum===2 ? 'YOUR TURN ⚡' : 'OPPONENT TURN';
+    drawDie('die1-cv', 'dim', '#00cfff', false);
+    drawDie('die2-cv', myPlayerNum===2 ? 'ready' : 'dim', '#ff2244', false);
+  }
+
+  // only MY dice is enabled
+  d1.disabled = !(myPlayerNum===1 && state.turn===1 && !state.attackMode);
+  d2.disabled = !(myPlayerNum===2 && state.turn===2 && !state.attackMode);
+
+  // flash YOUR TURN banner
+  if(myTurn){
+    const banner = document.getElementById('online-turn-banner');
+    banner.textContent = 'YOUR TURN';
+    banner.style.color = myPlayerNum===1 ? '#00cfff' : '#ff2244';
+    banner.style.textShadow = '0 0 20px '+(myPlayerNum===1?'#00cfff':'#ff2244');
+    banner.classList.add('show');
+    setTimeout(()=>banner.classList.remove('show'), 1600);
+  }
+
+  // rebuild bullet attack handlers for online
+  [1,2].forEach(p=>{
+    for(let i=0;i<3;i++){
+      const slot = document.getElementById('b'+p+'-'+i);
+      if(!slot) continue;
+      if(slot.classList.contains('filled-red')||slot.classList.contains('filled-blue')){
+        const idx=i;
+        const canAttack = myTurn && p===myPlayerNum && !state.gameOver && !state.attackMode;
+        slot.onclick = canAttack ? ()=>onlineActivateAttack(p,idx) : null;
+        slot.style.cursor = canAttack ? 'pointer' : 'default';
+      }
+    }
+  });
+}
+
+function onlineActivateAttack(player, bulletIdx){
+  if(state.attackMode){ cancelAttackMode(); return; }
+  const opp = player===1?2:1;
+  const hasTarget = ODDS_ONLINE.some(n=>state.rolls[opp][n]>0);
+  if(!hasTarget){ showStatus('No targets to attack!','err'); return; }
+  state.attackMode=true; state.attackingPlayer=player; state.attackBulletIdx=bulletIdx;
+  const slot=document.getElementById('b'+player+'-'+bulletIdx);
+  slot.style.color = player===1?'#00cfff':'#ff2244';
+  slot.classList.add('attack-selected');
+  document.getElementById('attack-banner').style.display='block';
+  document.getElementById('dice-p'+player).disabled=true;
+  ODDS_ONLINE.forEach(n=>{
+    const card=document.getElementById('cc'+opp+'-'+n);
+    if(state.rolls[opp][n]>0) card.classList.add('targetable');
+  });
+}
+
+/* ── Override handleCardClick for online ── */
+const _origHandleCardClick = handleCardClick;
+window.handleCardClick = function(tp, num){
+  if(isOnlineMode){
+    if(!state.attackMode) return;
+    if(tp===state.attackingPlayer) return;
+    if(state.rolls[tp][num]===0) return;
+    // send to server
+    socket.emit('attack',{ attackerNum:myPlayerNum, targetNum:num });
+    // clear UI immediately
+    const opp = myPlayerNum===1?2:1;
+    ODDS_ONLINE.forEach(n=>{
+      const c=document.getElementById('cc'+opp+'-'+n);
+      if(c) c.classList.remove('targetable');
+    });
+    document.getElementById('attack-banner').style.display='none';
+    const aSlot=document.getElementById('b'+myPlayerNum+'-'+state.attackBulletIdx);
+    if(aSlot) aSlot.classList.remove('attack-selected');
+    state.attackMode=false; state.attackingPlayer=null; state.attackBulletIdx=null;
+  } else {
+    _origHandleCardClick(tp, num);
+  }
+};
+
+/* ── Override rollDice for online ── */
+const _origRollDice = rollDice;
+window.rollDice = function(player){
+  if(isOnlineMode){
+    if(state.gameOver||state.attackMode) return;
+    if(player!==myPlayerNum||state.turn!==myPlayerNum) return;
+    document.getElementById('dice-p1').disabled=true;
+    document.getElementById('dice-p2').disabled=true;
+    socket.emit('roll',{ playerNum:myPlayerNum });
+  } else {
+    _origRollDice(player);
+  }
+};
+
+/* ── Override restartGame for online (rematch) ── */
+const _origRestartGame = restartGame;
+window.restartGame = function(){
+  if(isOnlineMode){ socket.emit('rematch'); }
+  else { _origRestartGame(); }
+};
+
+/* ── Override goHome to clean up ── */
+const _origGoHome = goHome;
+window.goHome = function(){
+  isOnlineMode=false; myPlayerNum=null; onlineRoomCode=null;
+  if(socket){ socket.disconnect(); socket=null; }
+  // safe cleanup without calling origGoHome which may error outside game context
+  state.gameOver=true;
+  const ro=document.getElementById('result-overlay'); if(ro) ro.classList.remove('show');
+  const cd=document.getElementById('countdown'); if(cd) cd.classList.remove('show');
+  showScreen('home');
+  try{ drawPreview(); }catch(e){}
+};
+
+/* ── Lobby actions ── */
+async function onlineCreate(){
+  const btn = document.querySelector('.lobby-btn.create');
+  if(btn){ btn.textContent = 'CONNECTING...'; btn.disabled=true; }
+  try{
+    await connectSocket();
+    socket.emit('create_room');
+  } catch(e){
+    showStatus('Cannot connect to server','err');
+    if(btn){ btn.textContent = '🎮 CREATE ROOM'; btn.disabled=false; }
+  }
+}
+
+async function onlineJoin(){
+  const code = document.getElementById('join-code-input').value.trim();
+  if(code.length!==4){ showStatus('Enter a 4-digit room code','err'); return; }
+  const btn = document.querySelector('.lobby-btn.join-btn');
+  if(btn){ btn.textContent = 'CONNECTING...'; btn.disabled=true; }
+  try{
+    await connectSocket();
+    socket.emit('join_room',{ code });
+  } catch(e){
+    showStatus('Cannot connect to server','err');
+    if(btn){ btn.textContent = '⚡ JOIN ROOM'; btn.disabled=false; }
+  }
+}
+
+</script>
+
+<!-- conn status toast -->
+<div id="conn-status"></div>
+
+<!-- ══ ONLINE LOBBY ══ -->
+<div class="screen" id="online-screen">
+  <div class="online-inner">
+    <div class="online-title">ONLINE<br><span>BATTLE</span></div>
+    <div class="online-sub">PLAY WITH FRIENDS WORLDWIDE</div>
+    <div class="lobby-card">
+      <div class="lobby-card-title">CREATE A NEW ROOM</div>
+      <button class="lobby-btn create" onclick="onlineCreate()">🎮 CREATE ROOM</button>
+    </div>
+    <div class="lobby-card">
+      <div class="lobby-card-title">JOIN WITH CODE</div>
+      <div class="code-input-wrap">
+        <input class="code-input" id="join-code-input" maxlength="4" placeholder="ENTER CODE" oninput="this.value=this.value.toUpperCase().replace(/[^0-9]/g,'')">
+      </div>
+      <button class="lobby-btn join-btn" onclick="onlineJoin()">⚡ JOIN ROOM</button>
+    </div>
+    <button class="lobby-back" onclick="goHome()">← BACK TO MENU</button>
+  </div>
+</div>
+
+<!-- ══ WAITING ROOM ══ -->
+<div class="screen" id="waiting-screen">
+  <div class="waiting-inner">
+    <div class="room-code-label">YOUR ROOM CODE</div>
+    <div class="room-code-display" id="display-code">----</div>
+    <div class="share-hint">Share this code with your friend!<br>They enter it on their phone to join.<br><strong>Both of you need this website open.</strong></div>
+    <div class="waiting-msg">
+      Waiting for opponent
+      <div class="wait-dots"><div class="wait-dot"></div><div class="wait-dot"></div><div class="wait-dot"></div></div>
+    </div>
+    <button class="lobby-back" onclick="goHome()">← CANCEL</button>
+  </div>
+</div>
+
+<!-- turn banner inside game (online) -->
+<div id="online-turn-banner"></div>
+
+</body>
+</html>
